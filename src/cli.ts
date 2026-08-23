@@ -1,4 +1,5 @@
 import "./lib/logger.js";
+import { startAdminServer } from "./admin/server.js";
 import { createAdapters } from "./adapters/index.js";
 import { loadConfig } from "./config.js";
 import { Database } from "./db/database.js";
@@ -55,8 +56,10 @@ async function main(): Promise<void> {
     ? new DiscordBotNotifier(database)
     : undefined;
   const monitor = new MonitorService(database, adapters, bot ?? new DiscordNotifier());
+  let adminServer: ReturnType<typeof startAdminServer> | undefined;
 
   const close = async (): Promise<void> => {
+    adminServer?.close();
     await browsers.close();
     await bot?.stop();
     database.close();
@@ -78,6 +81,7 @@ async function main(): Promise<void> {
   }
 
   const scheduler = new Scheduler(monitor, config);
+  adminServer = startAdminServer(database, config);
   await monitor.runAll(config.sources);
   scheduler.start();
   logger.info({ timezone: config.timezone }, "Dog monitor is running");
