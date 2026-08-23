@@ -47,6 +47,19 @@ export class MonitorService {
       const discoveries = this.database.persistListings(source.id, listings, observedAt);
       let notified = 0;
 
+      for (const discovery of discoveries) {
+        const currentStatus = discovery.listing.status ?? null;
+        if (discovery.kind !== "new" && discovery.previousStatus != null && discovery.previousStatus !== currentStatus) {
+          logger.info({
+            sourceId: source.id,
+            dogId: discovery.dogId,
+            dogName: discovery.listing.name,
+            from: discovery.previousStatus,
+            to: currentStatus
+          }, "Dog status changed");
+        }
+      }
+
       if (!seedThisRun) {
         for (const discovery of discoveries) {
           const notificationType = discovery.kind === "new"

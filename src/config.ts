@@ -8,7 +8,7 @@ const sourceSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
   name: z.string().min(1),
   enabled: z.boolean().default(true),
-  adapter: z.enum(["adopets", "petango", "adoptapet", "html"]),
+  adapter: z.enum(["adopets", "petango", "adoptapet", "safepaws", "html"]),
   url: z.string().url(),
   publicUrl: z.string().url().optional(),
   schedule: z.string().min(1).default("17 * * * *"),
@@ -28,6 +28,7 @@ const sourceSchema = z.object({
     breed: z.string().min(1).optional(),
     age: z.string().min(1).optional(),
     sex: z.string().min(1).optional(),
+    status: z.string().min(1).optional(),
     description: z.string().min(1).optional()
   }).optional()
 }).superRefine((source, ctx) => {

@@ -41,6 +41,7 @@ export function parseHtmlListings(html: string, source: SourceConfig): DogListin
     const breed = text(selectors.breed);
     const age = text(selectors.age);
     const sex = text(selectors.sex);
+    const status = text(selectors.status);
     const description = text(selectors.description);
 
     listings.push({
@@ -52,6 +53,7 @@ export function parseHtmlListings(html: string, source: SourceConfig): DogListin
       ...(breed ? { breed } : {}),
       ...(age ? { age } : {}),
       ...(sex ? { sex } : {}),
+      ...(status ? { status } : {}),
       ...(description ? { description } : {})
     });
   });

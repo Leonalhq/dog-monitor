@@ -62,6 +62,7 @@ function setup(initialListings: DogListing[]) {
     petango: adapter,
     adopets: adapter,
     adoptapet: adapter,
+    safepaws: adapter,
     html: adapter
   }, notifier);
   return { database, config, monitor, sent, setListings: (next: DogListing[]) => { listings = next; } };
@@ -104,6 +105,24 @@ describe("MonitorService", () => {
     await context.monitor.runSource(context.config);
 
     expect(context.sent).toHaveLength(1);
+    context.database.close();
+  });
+
+  it("stores a status change without sending another notification", async () => {
+    const available = { ...dog("1000001", "Waiting Dog"), status: "Available" };
+    const context = setup([available]);
+    await context.monitor.runSource(context.config);
+
+    context.setListings([{ ...available, status: "Pending" }]);
+    await context.monitor.runSource(context.config);
+
+    expect(context.sent).toHaveLength(0);
+    expect(context.database.sqlite.prepare(
+      "SELECT status FROM dogs WHERE source_id = ? AND external_id = ?"
+    ).get("test-source", "1000001")).toEqual({ status: "Pending" });
+    expect(context.database.sqlite.prepare(
+      "SELECT status FROM observations WHERE dog_id = (SELECT id FROM dogs WHERE external_id = ?) ORDER BY id"
+    ).all("1000001")).toEqual([{ status: "Available" }, { status: "Pending" }]);
     context.database.close();
   });
 });

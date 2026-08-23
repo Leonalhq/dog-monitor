@@ -13,6 +13,12 @@ interface AdoptAPetCard {
   text: string;
 }
 
+function statusFrom(text: string): string {
+  if (/\bpending\b/i.test(text)) return "Pending";
+  if (/\badopted\b/i.test(text)) return "Adopted";
+  return "Available";
+}
+
 async function listingsFromFrame(frame: Frame, source: SourceConfig): Promise<DogListing[]> {
   const cards = await frame.locator("a[href*='adoptapet.com/pet/'], a[href*='/pet/']").evaluateAll((anchors) =>
     anchors.map((anchor) => {
@@ -46,6 +52,7 @@ async function listingsFromFrame(frame: Frame, source: SourceConfig): Promise<Do
       ...(card.breed ? { breed: card.breed } : {}),
       ...(card.age ? { age: card.age } : {}),
       ...(sex ? { sex } : {}),
+      status: statusFrom(card.text),
       rawData: { text: card.text }
     } satisfies DogListing];
   });

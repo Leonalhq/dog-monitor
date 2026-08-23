@@ -42,3 +42,13 @@ sources:
     allowEmpty: false
     notifyRelisted: false
     filters: {}
+
+  - id: safepaws
+    name: Safe Paws Animal Rescue of Ontario
+    enabled: true
+    adapter: safepaws
+    url: "https://www.safepawsanimalrescue.com/animalsforadoption"
+    schedule: "57 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}

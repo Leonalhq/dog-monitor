@@ -10,8 +10,8 @@ function truncate(value: string, maximum: number): string {
   return value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
 }
 
-function optionalLine(label: string, value?: string): string | undefined {
-  return value ? `**${label}:** ${value}` : undefined;
+function detailLine(label: string, value?: string): string {
+  return `**${label}:** ${value || "Unknown"}`;
 }
 
 export class DiscordNotifier implements Notifier {
@@ -38,12 +38,12 @@ export class DiscordNotifier implements Notifier {
 
   sendDog(listing: DogListing, sourceName: string, kind: "new" | "relisted", _dogId: number): Promise<NotificationResult> {
     const description = [
-      optionalLine("Breed", listing.breed),
-      optionalLine("Age", listing.age),
-      optionalLine("Sex", listing.sex),
-      optionalLine("Location", listing.location),
-      optionalLine("Status", listing.status)
-    ].filter((line): line is string => Boolean(line)).join("\n") || "Open the adoption profile for details.";
+      detailLine("Breed", listing.breed),
+      detailLine("Age", listing.age),
+      detailLine("Sex", listing.sex),
+      detailLine("Location", listing.location),
+      detailLine("Status", listing.status)
+    ].join("\n");
 
     return this.post({
       username: "Adoptable Dog Monitor",

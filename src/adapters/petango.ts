@@ -6,6 +6,12 @@ import { deduplicateListings, type SourceAdapter } from "./adapter.js";
 
 const clean = (value: string): string => value.replace(/\s+/g, " ").trim();
 
+function statusFrom(text: string): string {
+  if (/\bpending\b/i.test(text)) return "Pending";
+  if (/\badopted\b/i.test(text)) return "Adopted";
+  return "Available";
+}
+
 function absoluteUrl(value: string | undefined, baseUrl: string): string | undefined {
   if (!value) return undefined;
   try {
@@ -46,7 +52,7 @@ export function parsePetangoHtml(html: string, source: SourceConfig, baseUrl = s
     const sex = rawSex.split("/")[0];
     const breed = clean(card.find(".list-animal-breed").first().text());
     const age = clean(card.find(".list-animal-age").first().text());
-    const status = /\badopted\b/i.test(name) ? "Adopted" : "Available";
+    const status = statusFrom(`${name} ${card.text()}`);
 
     listings.push({
       sourceId: source.id,
@@ -93,7 +99,7 @@ export function parsePetangoHtml(html: string, source: SourceConfig, baseUrl = s
       ...(breed ? { breed } : {}),
       ...(age ? { age } : {}),
       ...(location ? { location } : {}),
-      status: "Available",
+      status: statusFrom(card.text()),
       rawData: { text: clean(card.text()) }
     });
   });
@@ -138,6 +144,7 @@ export function parsePetangoHtml(html: string, source: SourceConfig, baseUrl = s
       ...(sex ? { sex } : {}),
       ...(age ? { age } : {}),
       ...(location ? { location } : {}),
+      status: statusFrom(text),
       rawData: { text }
     });
   });
