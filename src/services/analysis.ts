@@ -48,7 +48,7 @@ export class DogAnalyzer {
   constructor(
     private readonly database: Database,
     private readonly apiKey = process.env.GEMINI_API_KEY,
-    private readonly model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite"
+    private readonly model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite"
   ) {}
 
   async analyze(dogId: number): Promise<{ analysis: DogAnalysis; cached: boolean }> {

@@ -5,6 +5,7 @@ import {
   Client,
   Events,
   GatewayIntentBits,
+  MessageFlags,
   type ButtonInteraction,
   type MessageCreateOptions
 } from "discord.js";
@@ -16,7 +17,7 @@ import type { NotificationResult, Notifier } from "./notifier.js";
 const truncate = (value: string, maximum: number): string =>
   value.length <= maximum ? value : `${value.slice(0, maximum - 1)}…`;
 
-const optionalLine = (label: string, value?: string): string | undefined => value ? `**${label}:** ${value}` : undefined;
+const detailLine = (label: string, value?: string): string => `**${label}:** ${value || "Unknown"}`;
 
 export class DiscordBotNotifier implements Notifier {
   private readonly client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -37,7 +38,7 @@ export class DiscordBotNotifier implements Notifier {
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply(`操作失败：${truncate(message, 1_800)}`).catch(() => undefined);
         } else {
-          await interaction.reply({ content: `操作失败：${truncate(message, 1_800)}`, ephemeral: true }).catch(() => undefined);
+          await interaction.reply({ content: `操作失败：${truncate(message, 1_800)}`, flags: MessageFlags.Ephemeral }).catch(() => undefined);
         }
       });
     });
@@ -64,7 +65,7 @@ export class DiscordBotNotifier implements Notifier {
 
   private async handleButton(interaction: ButtonInteraction): Promise<void> {
     if (this.ownerUserId && interaction.user.id !== this.ownerUserId) {
-      await interaction.reply({ content: "这个按钮只允许 monitor owner 使用。", ephemeral: true });
+      await interaction.reply({ content: "这个按钮只允许 monitor owner 使用。", flags: MessageFlags.Ephemeral });
       return;
     }
     const match = interaction.customId.match(/^dog:(analyze|interest|hide):(\d+)$/);
@@ -73,14 +74,14 @@ export class DiscordBotNotifier implements Notifier {
     const dogId = Number(match[2]);
 
     if (action === "analyze") {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const result = await this.analyzer.analyze(dogId);
       await interaction.editReply(formatAnalysis(result.analysis, result.cached));
       return;
     }
     if (action === "interest") {
       this.database.setInterest(dogId, true);
-      await interaction.reply({ content: "⭐ 已记录为感兴趣。", ephemeral: true });
+      await interaction.reply({ content: "⭐ 已记录为感兴趣。", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -92,12 +93,12 @@ export class DiscordBotNotifier implements Notifier {
 
   sendDog(listing: DogListing, sourceName: string, kind: "new" | "relisted", dogId: number): Promise<NotificationResult> {
     const description = [
-      optionalLine("Breed", listing.breed),
-      optionalLine("Age", listing.age),
-      optionalLine("Sex", listing.sex),
-      optionalLine("Location", listing.location),
-      optionalLine("Status", listing.status)
-    ].filter((line): line is string => Boolean(line)).join("\n") || "Open the adoption profile for details.";
+      detailLine("Breed", listing.breed),
+      detailLine("Age", listing.age),
+      detailLine("Sex", listing.sex),
+      detailLine("Location", listing.location),
+      detailLine("Status", listing.status)
+    ].join("\n");
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder().setCustomId(`dog:analyze:${dogId}`).setLabel("解析").setEmoji("🔍").setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`dog:interest:${dogId}`).setLabel("感兴趣").setEmoji("⭐").setStyle(ButtonStyle.Success),

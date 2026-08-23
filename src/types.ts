@@ -1,4 +1,4 @@
-export type AdapterKind = "adopets" | "petango" | "adoptapet" | "html";
+export type AdapterKind = "adopets" | "petango" | "adoptapet" | "safepaws" | "html";
 
 export interface HtmlSelectors {
   item: string;
@@ -9,6 +9,7 @@ export interface HtmlSelectors {
   breed?: string | undefined;
   age?: string | undefined;
   sex?: string | undefined;
+  status?: string | undefined;
   description?: string | undefined;
 }
 
@@ -60,6 +61,7 @@ export interface PersistedDiscovery {
   kind: DiscoveryKind;
   listing: DogListing;
   changed: boolean;
+  previousStatus?: string | null;
 }
 
 export interface SourceRunSummary {

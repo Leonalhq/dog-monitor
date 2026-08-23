@@ -9,6 +9,7 @@ interface DogRow {
   id: number;
   content_hash: string;
   disappeared_at: string | null;
+  status: string | null;
 }
 
 export interface HealthRow {
@@ -133,7 +134,7 @@ export class Database {
 
   persistListings(sourceId: string, listings: DogListing[], observedAt: string): PersistedDiscovery[] {
     const findDog = this.sqlite.prepare(
-      "SELECT id, content_hash, disappeared_at FROM dogs WHERE source_id = ? AND external_id = ?"
+      "SELECT id, content_hash, disappeared_at, status FROM dogs WHERE source_id = ? AND external_id = ?"
     );
     const insertDog = this.sqlite.prepare(`
       INSERT INTO dogs (
@@ -206,7 +207,13 @@ export class Database {
 
         insertObservation.run(dogId, observedAt, contentHash, listing.status ?? null);
         seenIds.push(dogId);
-        discoveries.push({ dogId, kind, listing, changed });
+        discoveries.push({
+          dogId,
+          kind,
+          listing,
+          changed,
+          ...(existing ? { previousStatus: existing.status } : {})
+        });
       }
 
       if (seenIds.length === 0) {

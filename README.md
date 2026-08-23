@@ -8,6 +8,7 @@ A deterministic, token-free monitor for nearby dog rescue listings. It checks ea
 - Cambridge & District Humane Society (Petango)
 - Humane Society of Kitchener Waterloo & Stratford Perth (Petango)
 - Oxford County Animal Rescue (Adopt-a-Pet)
+- Safe Paws Animal Rescue of Ontario (Wix)
 
 The source adapter, schedule, empty-result policy, relisting behavior, and notification filters are independently configurable in `config/sources.yaml`.
 
