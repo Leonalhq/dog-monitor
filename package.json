@@ -1,0 +1,37 @@
+{
+  "name": "adoptable-dog-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts serve",
+    "start": "node dist/src/cli.js serve",
+    "run-once": "tsx src/cli.ts run-once",
+    "source:check": "tsx src/cli.ts source:check",
+    "seed": "tsx src/cli.ts seed",
+    "digest": "tsx src/cli.ts digest",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "latest",
+    "cheerio": "latest",
+    "cron": "latest",
+    "discord.js": "^14.27.0",
+    "pino": "latest",
+    "playwright": "latest",
+    "yaml": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "latest",
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}

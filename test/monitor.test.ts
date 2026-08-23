@@ -1,0 +1,109 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import type { SourceAdapter } from "../src/adapters/adapter.js";
+import { Database } from "../src/db/database.js";
+import { MonitorService } from "../src/services/monitor.js";
+import type { Notifier } from "../src/services/notifier.js";
+import type { DogListing, SourceConfig } from "../src/types.js";
+
+const temporaryDirectories: string[] = [];
+
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0)) {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+function source(overrides: Partial<SourceConfig> = {}): SourceConfig {
+  return {
+    id: "test-source",
+    name: "Test Rescue",
+    enabled: true,
+    adapter: "petango",
+    url: "https://example.test/dogs",
+    schedule: "0 * * * *",
+    allowEmpty: false,
+    notifyRelisted: false,
+    filters: {},
+    ...overrides
+  };
+}
+
+function dog(externalId: string, name: string): DogListing {
+  return {
+    sourceId: "test-source",
+    externalId,
+    name,
+    profileUrl: `https://example.test/dogs/${externalId}`,
+    imageUrl: `https://images.example/${externalId}.jpg`,
+    sex: "Female"
+  };
+}
+
+function setup(initialListings: DogListing[]) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "dog-monitor-test-"));
+  temporaryDirectories.push(directory);
+  const database = new Database(path.join(directory, "test.sqlite"));
+  const config = source();
+  database.syncSources([config]);
+  let listings = initialListings;
+  const adapter: SourceAdapter = { fetch: async () => listings };
+  const sent: DogListing[] = [];
+  const notifier: Notifier = {
+    sendDog: async (listing) => {
+      sent.push(listing);
+      return { messageId: `message-${sent.length}` };
+    },
+    sendDailyDigest: async () => ({})
+  };
+  const monitor = new MonitorService(database, {
+    petango: adapter,
+    adopets: adapter,
+    adoptapet: adapter,
+    html: adapter
+  }, notifier);
+  return { database, config, monitor, sent, setListings: (next: DogListing[]) => { listings = next; } };
+}
+
+describe("MonitorService", () => {
+  it("seeds existing dogs and only notifies a newly observed ID", async () => {
+    const context = setup([dog("1000001", "Existing Dog")]);
+
+    const first = await context.monitor.runSource(context.config);
+    expect(first.seeded).toBe(true);
+    expect(context.sent).toHaveLength(0);
+
+    await context.monitor.runSource(context.config);
+    expect(context.sent).toHaveLength(0);
+
+    context.setListings([dog("1000001", "Existing Dog"), dog("1000002", "New Dog")]);
+    await context.monitor.runSource(context.config);
+    expect(context.sent).toHaveLength(1);
+    expect(context.sent[0]).toMatchObject({
+      externalId: "1000002",
+      imageUrl: "https://images.example/1000002.jpg"
+    });
+
+    await context.monitor.runSource(context.config);
+    expect(context.sent).toHaveLength(1);
+    expect((context.database.sqlite.prepare("SELECT COUNT(*) AS count FROM dogs").get() as { count: number }).count).toBe(2);
+    expect((context.database.sqlite.prepare("SELECT COUNT(*) AS count FROM observations").get() as { count: number }).count).toBe(6);
+    context.database.close();
+  });
+
+  it("can distinguish a relisted dog without calling an LLM", async () => {
+    const context = setup([dog("1000001", "Returning Dog")]);
+    context.config.allowEmpty = true;
+    context.config.notifyRelisted = true;
+    await context.monitor.runSource(context.config);
+    context.setListings([]);
+    await context.monitor.runSource(context.config);
+    context.setListings([dog("1000001", "Returning Dog")]);
+    await context.monitor.runSource(context.config);
+
+    expect(context.sent).toHaveLength(1);
+    context.database.close();
+  });
+});

@@ -1,0 +1,17 @@
+services:
+  dog-monitor:
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}
+      DATABASE_PATH: /app/data/dog-monitor.sqlite
+      CONFIG_PATH: /app/config/sources.yaml
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: America/Toronto
+    volumes:
+      - dog-monitor-data:/app/data
+      - ./config/sources.yaml:/app/config/sources.yaml:ro
+
+volumes:
+  dog-monitor-data:

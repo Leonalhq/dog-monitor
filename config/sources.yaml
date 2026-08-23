@@ -1,0 +1,44 @@
+timezone: America/Toronto
+dailyDigestSchedule: "0 9 * * *"
+
+sources:
+  - id: guelph
+    name: Guelph Humane Society
+    enabled: true
+    adapter: adopets
+    url: "https://iframe.adopets.com/guelph-humane-society?shelter_uuid=ef63c7cd-7e2d-4db2-b356-534fef0e1bb5&g=15&p=15&t=true&nb=false&al_show=true"
+    publicUrl: "https://guelphhumane.ca/adopt/available-animals/"
+    schedule: "17 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}
+
+  - id: cambridge
+    name: Cambridge & District Humane Society
+    enabled: true
+    adapter: petango
+    url: "https://cambridgehumanesociety.org/adoption/adopt-a-dog/"
+    schedule: "32 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}
+
+  - id: kwsp
+    name: Humane Society of Kitchener Waterloo & Stratford Perth
+    enabled: true
+    adapter: petango
+    url: "https://kwsphumane.ca/adopt/dogs"
+    schedule: "47 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}
+
+  - id: oxford
+    name: Oxford County Animal Rescue
+    enabled: true
+    adapter: adoptapet
+    url: "https://www.oxfordcountyanimalrescue.com/dogs-for-adoption.html"
+    schedule: "5 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}
