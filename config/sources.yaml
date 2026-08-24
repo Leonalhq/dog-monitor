@@ -52,3 +52,19 @@ sources:
     allowEmpty: false
     notifyRelisted: false
     filters: {}
+
+  - id: standard-poodles
+    name: Standard Poodles in Need
+    enabled: true
+    adapter: html
+    url: "https://standardpoodlesinneed.com/available-dogs/"
+    schedule: "12 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}
+    selectors:
+      item: ".Bzl-dog-post.type-dog"
+      name: ".Bzl-dog-heading > a"
+      link: ".Bzl-dog-heading > a"
+      image: ".Bzl-dog-img img"
+      status: ".Bzl-pending"
