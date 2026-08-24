@@ -28,6 +28,10 @@ export class MonitorService {
     private readonly notifier: Notifier
   ) {}
 
+  getActiveSourceIds(): string[] {
+    return [...this.activeSources];
+  }
+
   async runSource(source: SourceConfig, options: { forceSeed?: boolean } = {}): Promise<SourceRunSummary> {
     if (this.activeSources.has(source.id)) {
       throw new Error(`Source ${source.id} is already running`);

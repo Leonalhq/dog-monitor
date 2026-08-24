@@ -81,7 +81,7 @@ async function main(): Promise<void> {
   }
 
   const scheduler = new Scheduler(monitor, config);
-  adminServer = startAdminServer(database, config);
+  adminServer = startAdminServer(database, config, monitor, scheduler);
   await monitor.runAll(config.sources);
   scheduler.start();
   logger.info({ timezone: config.timezone }, "Dog monitor is running");

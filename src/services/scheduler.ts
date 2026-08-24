@@ -38,4 +38,8 @@ export class Scheduler {
     for (const job of this.jobs) job.stop();
     this.jobs.length = 0;
   }
+
+  isRunning(): boolean {
+    return this.jobs.length > 0;
+  }
 }

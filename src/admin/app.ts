@@ -1,7 +1,15 @@
-import { Hono } from "hono";
+import { randomBytes } from "node:crypto";
+import { Hono, type Context } from "hono";
 import type { Database } from "../db/database.js";
 import { getRecentLogs } from "../lib/logger.js";
-import type { AppConfig } from "../types.js";
+import type { AppConfig, SourceConfig } from "../types.js";
+
+export interface AdminRuntime {
+  isSchedulerRunning(): boolean;
+  getActiveSourceIds(): string[];
+  runSource(source: SourceConfig): Promise<unknown>;
+  runAll(): Promise<unknown>;
+}
 
 interface Counts {
   dogs: number;
@@ -14,6 +22,7 @@ interface Counts {
 interface SourceRow {
   id: string;
   name: string;
+  last_started_at: string | null;
   last_success_at: string | null;
   last_error: string | null;
   consecutive_failures: number;
@@ -54,11 +63,11 @@ const displayTime = (value: string | null): string => value
   ? new Date(value).toLocaleString("en-CA", { timeZone: "America/Toronto" })
   : "Never";
 
-function layout(title: string, body: string): string {
+function layout(title: string, body: string, script = ""): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(title)} · Dog Monitor</title><style>
-  :root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#e8edf5;background:#0c111b}*{box-sizing:border-box}body{margin:0}a{color:#8ec5ff;text-decoration:none}nav{display:flex;gap:20px;padding:18px max(24px,calc((100% - 1180px)/2));background:#141c2a;border-bottom:1px solid #263247;position:sticky;top:0}main{max-width:1180px;margin:32px auto;padding:0 24px}h1{margin:0 0 24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}.card{background:#141c2a;border:1px solid #263247;border-radius:12px;padding:18px}.number{font-size:30px;font-weight:700;margin-top:6px}.muted{color:#93a4bb}.ok{color:#67d391}.bad{color:#ff7b86}table{width:100%;border-collapse:collapse;background:#141c2a;border-radius:12px;overflow:hidden}th,td{text-align:left;padding:12px;border-bottom:1px solid #263247;vertical-align:top}th{color:#93a4bb;font-size:13px}tr:last-child td{border:0}code{white-space:pre-wrap;overflow-wrap:anywhere}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#263247}.section{margin-top:28px}@media(max-width:700px){table{display:block;overflow-x:auto}}
-  </style></head><body><nav><a href="/ops">Dashboard</a><a href="/ops/dogs">Dogs</a><a href="/ops/notifications">Notifications</a><a href="/ops/logs">Logs</a></nav><main><h1>${escapeHtml(title)}</h1>${body}</main></body></html>`;
+  :root{font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#e8edf5;background:#0c111b}*{box-sizing:border-box}body{margin:0}a{color:#8ec5ff;text-decoration:none}nav{display:flex;gap:20px;padding:18px max(24px,calc((100% - 1180px)/2));background:#141c2a;border-bottom:1px solid #263247;position:sticky;top:0}main{max-width:1180px;margin:32px auto;padding:0 24px}h1{margin:0 0 24px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}.card{background:#141c2a;border:1px solid #263247;border-radius:12px;padding:18px}.number{font-size:30px;font-weight:700;margin-top:6px}.muted{color:#93a4bb}.ok{color:#67d391}.warn{color:#ffc861}.bad{color:#ff7b86}table{width:100%;border-collapse:collapse;background:#141c2a;border-radius:12px;overflow:hidden}th,td{text-align:left;padding:12px;border-bottom:1px solid #263247;vertical-align:top}th{color:#93a4bb;font-size:13px}tr:last-child td{border:0}code{white-space:pre-wrap;overflow-wrap:anywhere}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#263247}.section{margin-top:28px}.button{cursor:pointer;color:#e8edf5;background:#245ea8;border:0;border-radius:7px;padding:8px 11px;font-weight:600}.button:disabled{cursor:not-allowed;opacity:.45}.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px}.notice{border:1px solid #326c4b;background:#142d22;border-radius:9px;padding:12px;margin-bottom:18px}@media(max-width:700px){table{display:block;overflow-x:auto}}
+  </style></head><body><nav><a href="/ops">Dashboard</a><a href="/ops/dogs">Dogs</a><a href="/ops/notifications">Notifications</a><a href="/ops/logs">Logs</a></nav><main><h1>${escapeHtml(title)}</h1>${body}</main>${script}</body></html>`;
 }
 
 function table(headers: string[], rows: string[][]): string {
@@ -69,8 +78,28 @@ function table(headers: string[], rows: string[][]): string {
   return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-export function createAdminApp(database: Database, config: AppConfig, startedAt = Date.now()): Hono {
+const idleRuntime: AdminRuntime = {
+  isSchedulerRunning: () => false,
+  getActiveSourceIds: () => [],
+  runSource: async () => undefined,
+  runAll: async () => undefined
+};
+
+export function createAdminApp(
+  database: Database,
+  config: AppConfig,
+  runtime: AdminRuntime = idleRuntime,
+  startedAt = Date.now()
+): Hono {
   const app = new Hono();
+  const csrfToken = randomBytes(24).toString("hex");
+
+  const sourceRows = (): SourceRow[] => database.sqlite.prepare(`
+    SELECT s.id, s.name, s.last_started_at, s.last_success_at, s.last_error,
+      s.consecutive_failures, COUNT(d.id) AS dogs
+    FROM sources s LEFT JOIN dogs d ON d.source_id = s.id AND d.disappeared_at IS NULL
+    WHERE s.enabled = 1 GROUP BY s.id ORDER BY s.name
+  `).all() as SourceRow[];
 
   app.get("/ops", (context) => {
     const counts = database.sqlite.prepare(`
@@ -81,25 +110,55 @@ export function createAdminApp(database: Database, config: AppConfig, startedAt 
         (SELECT COUNT(*) FROM notifications WHERE status = 'failed') AS failed_notifications
       FROM dogs
     `).get() as Counts;
-    const sources = database.sqlite.prepare(`
-      SELECT s.id, s.name, s.last_success_at, s.last_error, s.consecutive_failures, COUNT(d.id) AS dogs
-      FROM sources s LEFT JOIN dogs d ON d.source_id = s.id AND d.disappeared_at IS NULL
-      WHERE s.enabled = 1 GROUP BY s.id ORDER BY s.name
-    `).all() as SourceRow[];
+    const sources = sourceRows();
+    const activeSources = new Set(runtime.getActiveSourceIds());
+    const schedulerRunning = runtime.isSchedulerRunning();
+    const serviceStatus = activeSources.size > 0
+      ? "Running"
+      : !schedulerRunning
+        ? "Starting"
+        : sources.some((source) => source.consecutive_failures > 0) ? "Degraded" : "Healthy";
     const schedules = new Map(config.sources.map((source) => [source.id, source.schedule]));
     const cards = [
+      ["Service", serviceStatus],
       ["Dogs", counts.dogs], ["Currently listed", counts.active], ["First seen · 24h", counts.new_today],
       ["Notifications", counts.notifications], ["Failed notifications", counts.failed_notifications],
       ["Uptime", `${Math.floor((Date.now() - startedAt) / 60_000)} min`]
     ].map(([label, value]) => `<div class="card"><div class="muted">${escapeHtml(label)}</div><div class="number">${escapeHtml(value)}</div></div>`).join("");
-    const sourceTable = table(["Source", "Schedule", "Dogs", "Health", "Last success"], sources.map((source) => [
+    const sourceTable = table(["Source", "Schedule", "Dogs", "Status", "Last run", "Action"], sources.map((source) => [
       escapeHtml(source.name), escapeHtml(schedules.get(source.id) ?? "—"), escapeHtml(source.dogs),
-      source.consecutive_failures > 0
+      activeSources.has(source.id)
+        ? '<span class="warn">Running now</span>'
+        : source.consecutive_failures > 0
         ? `<span class="bad">${source.consecutive_failures} failure(s): ${escapeHtml(source.last_error)}</span>`
-        : '<span class="ok">Healthy</span>',
-      escapeHtml(displayTime(source.last_success_at))
+        : source.last_started_at ? '<span class="ok">Healthy</span>' : '<span class="muted">Waiting for first run</span>',
+      `${escapeHtml(displayTime(source.last_started_at))}<br><span class="muted">Success: ${escapeHtml(displayTime(source.last_success_at))}</span>`,
+      `<form method="post" action="/ops/run/${encodeURIComponent(source.id)}" onsubmit="return confirm('Run this source now? A genuinely new dog will be sent to Discord.')"><input type="hidden" name="csrf" value="${csrfToken}"><button class="button" ${activeSources.has(source.id) ? "disabled" : ""}>Run now</button></form>`
     ]));
-    return context.html(layout("Operations", `<div class="grid">${cards}</div><div class="section"><h2>Sources</h2>${sourceTable}</div>`));
+    const started = context.req.query("started");
+    const notice = started ? `<div class="notice">Started: ${escapeHtml(started)}. Status refreshes automatically.</div>` : "";
+    const runAll = `<form method="post" action="/ops/run-all" onsubmit="return confirm('Run all sources now? Genuinely new dogs will be sent to Discord.')"><input type="hidden" name="csrf" value="${csrfToken}"><button class="button">Run all now</button></form>`;
+    return context.html(layout("Operations", `${notice}<div class="grid">${cards}</div><div class="section"><div class="toolbar"><h2>Sources</h2>${runAll}</div>${sourceTable}</div>`, '<script>setTimeout(()=>location.reload(),10000)</script>'));
+  });
+
+  const verifyCsrf = async (context: Context): Promise<boolean> => {
+    const body = await context.req.parseBody();
+    return body.csrf === csrfToken;
+  };
+
+  app.post("/ops/run-all", async (context) => {
+    if (!await verifyCsrf(context)) return context.text("Forbidden", 403);
+    void runtime.runAll().catch(() => undefined);
+    return context.redirect("/ops?started=all+sources", 303);
+  });
+
+  app.post("/ops/run/:sourceId", async (context) => {
+    if (!await verifyCsrf(context)) return context.text("Forbidden", 403);
+    const source = config.sources.find((item) => item.enabled && item.id === context.req.param("sourceId"));
+    if (!source) return context.text("Source not found", 404);
+    if (runtime.getActiveSourceIds().includes(source.id)) return context.text("Source is already running", 409);
+    void runtime.runSource(source).catch(() => undefined);
+    return context.redirect(`/ops?started=${encodeURIComponent(source.name)}`, 303);
   });
 
   app.get("/ops/dogs", (context) => {
@@ -142,6 +201,20 @@ export function createAdminApp(database: Database, config: AppConfig, startedAt 
     </script>`)));
 
   app.get("/ops/api/logs", (context) => context.json(getRecentLogs()));
-  app.get("/ops/api/health", (context) => context.json({ ok: true, uptimeSeconds: Math.floor((Date.now() - startedAt) / 1_000) }));
+  app.get("/ops/api/health", (context) => {
+    const sources = sourceRows();
+    const activeSourceIds = runtime.getActiveSourceIds();
+    const schedulerRunning = runtime.isSchedulerRunning();
+    const failingSources = sources.filter((source) => source.consecutive_failures > 0).map((source) => source.id);
+    const status = activeSourceIds.length > 0 ? "running" : !schedulerRunning ? "starting" : failingSources.length > 0 ? "degraded" : "healthy";
+    return context.json({
+      ok: true,
+      status,
+      uptimeSeconds: Math.floor((Date.now() - startedAt) / 1_000),
+      schedulerRunning,
+      activeSourceIds,
+      failingSources
+    });
+  });
   return app;
 }
