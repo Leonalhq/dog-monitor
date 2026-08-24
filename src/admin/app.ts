@@ -7,6 +7,7 @@ import type { AppConfig, SourceConfig } from "../types.js";
 export interface AdminRuntime {
   isSchedulerRunning(): boolean;
   getActiveSourceIds(): string[];
+  getNotificationStatus(): "online" | "webhook" | "offline" | "not-configured";
   runSource(source: SourceConfig): Promise<unknown>;
   runAll(): Promise<unknown>;
 }
@@ -81,6 +82,7 @@ function table(headers: string[], rows: string[][]): string {
 const idleRuntime: AdminRuntime = {
   isSchedulerRunning: () => false,
   getActiveSourceIds: () => [],
+  getNotificationStatus: () => "not-configured",
   runSource: async () => undefined,
   runAll: async () => undefined
 };
@@ -113,14 +115,17 @@ export function createAdminApp(
     const sources = sourceRows();
     const activeSources = new Set(runtime.getActiveSourceIds());
     const schedulerRunning = runtime.isSchedulerRunning();
+    const notificationStatus = runtime.getNotificationStatus();
     const serviceStatus = activeSources.size > 0
       ? "Running"
       : !schedulerRunning
         ? "Starting"
-        : sources.some((source) => source.consecutive_failures > 0) ? "Degraded" : "Healthy";
+        : sources.some((source) => source.consecutive_failures > 0) || ["offline", "not-configured"].includes(notificationStatus)
+          ? "Degraded" : "Healthy";
     const schedules = new Map(config.sources.map((source) => [source.id, source.schedule]));
     const cards = [
       ["Service", serviceStatus],
+      ["Discord", notificationStatus === "not-configured" ? "Not configured" : notificationStatus[0]!.toUpperCase() + notificationStatus.slice(1)],
       ["Dogs", counts.dogs], ["Currently listed", counts.active], ["First seen · 24h", counts.new_today],
       ["Notifications", counts.notifications], ["Failed notifications", counts.failed_notifications],
       ["Uptime", `${Math.floor((Date.now() - startedAt) / 60_000)} min`]
@@ -205,13 +210,19 @@ export function createAdminApp(
     const sources = sourceRows();
     const activeSourceIds = runtime.getActiveSourceIds();
     const schedulerRunning = runtime.isSchedulerRunning();
+    const notificationStatus = runtime.getNotificationStatus();
     const failingSources = sources.filter((source) => source.consecutive_failures > 0).map((source) => source.id);
-    const status = activeSourceIds.length > 0 ? "running" : !schedulerRunning ? "starting" : failingSources.length > 0 ? "degraded" : "healthy";
+    const status = activeSourceIds.length > 0
+      ? "running"
+      : !schedulerRunning
+        ? "starting"
+        : failingSources.length > 0 || ["offline", "not-configured"].includes(notificationStatus) ? "degraded" : "healthy";
     return context.json({
       ok: true,
       status,
       uptimeSeconds: Math.floor((Date.now() - startedAt) / 1_000),
       schedulerRunning,
+      notificationStatus,
       activeSourceIds,
       failingSources
     });

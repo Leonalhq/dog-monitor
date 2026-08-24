@@ -23,6 +23,7 @@ describe("operations dashboard", () => {
     const runtime: AdminRuntime = {
       isSchedulerRunning: () => true,
       getActiveSourceIds: () => [],
+      getNotificationStatus: () => "online",
       runSource: async (item) => { calls.push(item.id); },
       runAll: async () => { calls.push("all"); }
     };
@@ -35,7 +36,9 @@ describe("operations dashboard", () => {
     expect(html).not.toContain("Test <Rescue>");
     expect(html).toContain("Run now");
     const health = await app.request("/ops/api/health");
-    expect(await health.json()).toMatchObject({ ok: true, status: "degraded", schedulerRunning: true, failingSources: ["test"] });
+    expect(await health.json()).toMatchObject({
+      ok: true, status: "degraded", schedulerRunning: true, notificationStatus: "online", failingSources: ["test"]
+    });
 
     const forbidden = await app.request("/ops/run/test", { method: "POST" });
     expect(forbidden.status).toBe(403);

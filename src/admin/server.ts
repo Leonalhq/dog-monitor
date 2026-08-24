@@ -10,7 +10,8 @@ export function startAdminServer(
   database: Database,
   config: AppConfig,
   monitor: MonitorService,
-  scheduler: Scheduler
+  scheduler: Scheduler,
+  getNotificationStatus: () => "online" | "webhook" | "offline" | "not-configured"
 ): ServerType {
   const port = Number(process.env.ADMIN_PORT ?? 3210);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) throw new Error("ADMIN_PORT must be an integer from 1 to 65535");
@@ -18,6 +19,7 @@ export function startAdminServer(
     fetch: createAdminApp(database, config, {
       isSchedulerRunning: () => scheduler.isRunning(),
       getActiveSourceIds: () => monitor.getActiveSourceIds(),
+      getNotificationStatus,
       runSource: (source) => monitor.runSource(source),
       runAll: () => monitor.runAll(config.sources)
     }).fetch,

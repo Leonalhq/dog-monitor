@@ -81,7 +81,10 @@ async function main(): Promise<void> {
   }
 
   const scheduler = new Scheduler(monitor, config);
-  adminServer = startAdminServer(database, config, monitor, scheduler);
+  const webhookConfigured = Boolean(process.env.DISCORD_WEBHOOK_URL && !/replace|your|你的/i.test(process.env.DISCORD_WEBHOOK_URL));
+  adminServer = startAdminServer(database, config, monitor, scheduler, () =>
+    bot ? bot.isReady() ? "online" : "offline" : webhookConfigured ? "webhook" : "not-configured"
+  );
   await monitor.runAll(config.sources);
   scheduler.start();
   logger.info({ timezone: config.timezone }, "Dog monitor is running");

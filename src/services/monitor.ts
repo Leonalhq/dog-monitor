@@ -66,11 +66,11 @@ export class MonitorService {
 
       if (!seedThisRun) {
         for (const discovery of discoveries) {
-          const notificationType = discovery.kind === "new"
+          const notificationType = (discovery.kind === "new"
             ? "new"
             : discovery.kind === "relisted" && source.notifyRelisted
               ? "relisted"
-              : undefined;
+              : undefined) ?? this.database.getFailedNotificationType(discovery.dogId);
           if (!notificationType || !matchesNotificationFilters(discovery.listing, source)) continue;
           if (!this.database.shouldSendNotification(discovery.dogId, notificationType, observedAt)) continue;
 

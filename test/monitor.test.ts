@@ -51,8 +51,14 @@ function setup(initialListings: DogListing[]) {
   let listings = initialListings;
   const adapter: SourceAdapter = { fetch: async () => listings };
   const sent: DogListing[] = [];
+  let nextSendError: Error | undefined;
   const notifier: Notifier = {
     sendDog: async (listing) => {
+      if (nextSendError) {
+        const error = nextSendError;
+        nextSendError = undefined;
+        throw error;
+      }
       sent.push(listing);
       return { messageId: `message-${sent.length}` };
     },
@@ -65,7 +71,11 @@ function setup(initialListings: DogListing[]) {
     safepaws: adapter,
     html: adapter
   }, notifier);
-  return { database, config, monitor, sent, setListings: (next: DogListing[]) => { listings = next; } };
+  return {
+    database, config, monitor, sent,
+    setListings: (next: DogListing[]) => { listings = next; },
+    failNextSend: () => { nextSendError = new Error("Discord offline"); }
+  };
 }
 
 describe("MonitorService", () => {
@@ -123,6 +133,25 @@ describe("MonitorService", () => {
     expect(context.database.sqlite.prepare(
       "SELECT status FROM observations WHERE dog_id = (SELECT id FROM dogs WHERE external_id = ?) ORDER BY id"
     ).all("1000001")).toEqual([{ status: "Available" }, { status: "Pending" }]);
+    context.database.close();
+  });
+
+  it("retries a failed notification on the next source run", async () => {
+    const existing = dog("1000001", "Existing Dog");
+    const newcomer = dog("1000002", "Retry Dog");
+    const context = setup([existing]);
+    await context.monitor.runSource(context.config);
+
+    context.setListings([existing, newcomer]);
+    context.failNextSend();
+    await context.monitor.runSource(context.config);
+    expect(context.sent).toHaveLength(0);
+
+    await context.monitor.runSource(context.config);
+    expect(context.sent).toEqual([newcomer]);
+    expect(context.database.sqlite.prepare(
+      "SELECT status, attempts FROM notifications WHERE dog_id = (SELECT id FROM dogs WHERE external_id = ?)"
+    ).get("1000002")).toEqual({ status: "sent", attempts: 2 });
     context.database.close();
   });
 });
