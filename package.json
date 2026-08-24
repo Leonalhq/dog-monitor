@@ -14,7 +14,7 @@
     "source:check": "tsx src/cli.ts source:check",
     "seed": "tsx src/cli.ts seed",
     "digest": "tsx src/cli.ts digest",
-    "test": "vitest run --maxWorkers=1",
+    "test": "vitest run --pool=threads --maxWorkers=1",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
