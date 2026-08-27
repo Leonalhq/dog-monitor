@@ -60,7 +60,14 @@ stop() {
   echo "Dog monitor stopped"
 }
 
-case "${1:-start}" in
+case "${1:-}" in
+  "")
+    if is_running; then
+      echo "Dog monitor is already running (PID $pid); restarting for an immediate scan"
+      stop
+    fi
+    start
+    ;;
   start) start ;;
   stop) stop ;;
   restart) stop; start ;;
