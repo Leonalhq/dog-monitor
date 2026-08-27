@@ -69,6 +69,7 @@ function setup(initialListings: DogListing[]) {
     adopets: adapter,
     adoptapet: adapter,
     safepaws: adapter,
+    goldenrescue: adapter,
     html: adapter
   }, notifier);
   return {
