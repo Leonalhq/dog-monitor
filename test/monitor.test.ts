@@ -70,6 +70,7 @@ function setup(initialListings: DogListing[]) {
     adoptapet: adapter,
     safepaws: adapter,
     goldenrescue: adapter,
+    ontariospca: adapter,
     html: adapter
   }, notifier);
   return {

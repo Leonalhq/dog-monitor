@@ -78,3 +78,13 @@ sources:
     allowEmpty: false
     notifyRelisted: false
     filters: {}
+
+  - id: ontario-spca-orangeville
+    name: Ontario SPCA - Orangeville
+    enabled: true
+    adapter: ontariospca
+    url: "https://ontariospca.ca/adopt/?location=orangeville&order=default&pageNumber=1"
+    schedule: "27 * * * *"
+    allowEmpty: true
+    notifyRelisted: false
+    filters: {}
