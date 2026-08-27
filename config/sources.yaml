@@ -88,3 +88,13 @@ sources:
     allowEmpty: true
     notifyRelisted: false
     filters: {}
+
+  - id: welcome-dog-korea-toronto-large
+    name: Welcome Dog Korea - Toronto Large Dogs
+    enabled: true
+    adapter: welcomedogkorea
+    url: "https://www.welcomedogkorea.org/find-a-dog?page=1&location=Toronto&size=large&status=&search="
+    schedule: "37 * * * *"
+    allowEmpty: true
+    notifyRelisted: false
+    filters: {}

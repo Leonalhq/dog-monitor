@@ -71,6 +71,7 @@ function setup(initialListings: DogListing[]) {
     safepaws: adapter,
     goldenrescue: adapter,
     ontariospca: adapter,
+    welcomedogkorea: adapter,
     html: adapter
   }, notifier);
   return {

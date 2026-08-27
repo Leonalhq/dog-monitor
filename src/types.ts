@@ -1,4 +1,4 @@
-export type AdapterKind = "adopets" | "petango" | "adoptapet" | "safepaws" | "goldenrescue" | "ontariospca" | "html";
+export type AdapterKind = "adopets" | "petango" | "adoptapet" | "safepaws" | "goldenrescue" | "ontariospca" | "welcomedogkorea" | "html";
 
 export interface HtmlSelectors {
   item: string;

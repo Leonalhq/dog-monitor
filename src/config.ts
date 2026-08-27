@@ -8,7 +8,7 @@ const sourceSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
   name: z.string().min(1),
   enabled: z.boolean().default(true),
-  adapter: z.enum(["adopets", "petango", "adoptapet", "safepaws", "goldenrescue", "ontariospca", "html"]),
+  adapter: z.enum(["adopets", "petango", "adoptapet", "safepaws", "goldenrescue", "ontariospca", "welcomedogkorea", "html"]),
   url: z.string().url(),
   publicUrl: z.string().url().optional(),
   schedule: z.string().min(1).default("17 * * * *"),
