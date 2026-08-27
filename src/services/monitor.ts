@@ -28,6 +28,10 @@ export class MonitorService {
     private readonly notifier: Notifier
   ) {}
 
+  getActiveSourceIds(): string[] {
+    return [...this.activeSources];
+  }
+
   async runSource(source: SourceConfig, options: { forceSeed?: boolean } = {}): Promise<SourceRunSummary> {
     if (this.activeSources.has(source.id)) {
       throw new Error(`Source ${source.id} is already running`);
@@ -62,11 +66,11 @@ export class MonitorService {
 
       if (!seedThisRun) {
         for (const discovery of discoveries) {
-          const notificationType = discovery.kind === "new"
+          const notificationType = (discovery.kind === "new"
             ? "new"
             : discovery.kind === "relisted" && source.notifyRelisted
               ? "relisted"
-              : undefined;
+              : undefined) ?? this.database.getFailedNotificationType(discovery.dogId);
           if (!notificationType || !matchesNotificationFilters(discovery.listing, source)) continue;
           if (!this.database.shouldSendNotification(discovery.dogId, notificationType, observedAt)) continue;
 

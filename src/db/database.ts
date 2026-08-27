@@ -249,6 +249,15 @@ export class Database {
     return true;
   }
 
+  getFailedNotificationType(dogId: number): "new" | "relisted" | undefined {
+    const row = this.sqlite.prepare(`
+      SELECT notification_type FROM notifications
+      WHERE dog_id = ? AND status = 'failed' AND notification_type IN ('new', 'relisted')
+      ORDER BY id LIMIT 1
+    `).get(dogId) as { notification_type: "new" | "relisted" } | undefined;
+    return row?.notification_type;
+  }
+
   markNotificationSent(dogId: number, notificationType: string, sentAt: string, messageId?: string): void {
     this.sqlite.prepare(`
       UPDATE notifications

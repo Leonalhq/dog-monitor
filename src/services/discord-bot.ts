@@ -10,6 +10,7 @@ import {
   type MessageCreateOptions
 } from "discord.js";
 import type { Database, DigestRow, HealthRow } from "../db/database.js";
+import { logger } from "../lib/logger.js";
 import type { DogListing } from "../types.js";
 import { DogAnalyzer, formatAnalysis } from "./analysis.js";
 import type { NotificationResult, Notifier } from "./notifier.js";
@@ -49,6 +50,11 @@ export class DiscordBotNotifier implements Notifier {
     if (!this.token || !this.channelId) throw new Error("DISCORD_BOT_TOKEN and DISCORD_CHANNEL_ID are required");
     this.started = true;
     await this.client.login(this.token);
+    logger.info({ bot: this.client.user?.tag }, "Discord bot is online");
+  }
+
+  isReady(): boolean {
+    return this.client.isReady();
   }
 
   async stop(): Promise<void> {

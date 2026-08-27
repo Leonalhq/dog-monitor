@@ -14,14 +14,16 @@
     "source:check": "tsx src/cli.ts source:check",
     "seed": "tsx src/cli.ts seed",
     "digest": "tsx src/cli.ts digest",
-    "test": "vitest run",
+    "test": "vitest run --pool=threads --maxWorkers=1",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.1",
     "better-sqlite3": "latest",
     "cheerio": "latest",
     "cron": "latest",
     "discord.js": "^14.27.0",
+    "hono": "^4.13.3",
     "pino": "latest",
     "playwright": "latest",
     "yaml": "latest",

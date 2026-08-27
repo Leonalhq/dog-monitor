@@ -52,3 +52,39 @@ sources:
     allowEmpty: false
     notifyRelisted: false
     filters: {}
+
+  - id: standard-poodles
+    name: Standard Poodles in Need
+    enabled: true
+    adapter: html
+    url: "https://standardpoodlesinneed.com/available-dogs/"
+    schedule: "12 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}
+    selectors:
+      item: ".Bzl-dog-post.type-dog"
+      name: ".Bzl-dog-heading > a"
+      link: ".Bzl-dog-heading > a"
+      image: ".Bzl-dog-img img"
+      status: ".Bzl-pending"
+
+  - id: golden-rescue
+    name: Golden Rescue
+    enabled: true
+    adapter: goldenrescue
+    url: "https://goldenrescue.ca/our-goldens/adopt-3/?status=available#adoptions"
+    schedule: "22 * * * *"
+    allowEmpty: false
+    notifyRelisted: false
+    filters: {}
+
+  - id: ontario-spca-orangeville
+    name: Ontario SPCA - Orangeville
+    enabled: true
+    adapter: ontariospca
+    url: "https://ontariospca.ca/adopt/?location=orangeville&order=default&pageNumber=1"
+    schedule: "27 * * * *"
+    allowEmpty: true
+    notifyRelisted: false
+    filters: {}

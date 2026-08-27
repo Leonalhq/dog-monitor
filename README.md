@@ -47,6 +47,8 @@ npm run digest
 - `dev` performs a startup scan and then runs the hourly and daily schedules.
 - `source:check -- <id>` parses one source without touching SQLite or Discord and prints validation samples.
 
+While `serve` is running, the read-only operations dashboard is available at `http://127.0.0.1:3210/ops`. It shows source health, recent dogs, notification attempts, and the latest in-process logs. Set `ADMIN_PORT` to change the local port.
+
 ## Interactive Discord bot
 
 Set `DISCORD_BOT_TOKEN`, `DISCORD_CHANNEL_ID`, and optionally `DISCORD_OWNER_USER_ID` to send future dog cards through a bot with Analyze, Interested, and Hide buttons. Hide records the choice and deletes the bot message for everyone in that channel. Without these values, the existing webhook remains the fallback.
