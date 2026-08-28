@@ -8,6 +8,7 @@ import { OntarioSpcaAdapter } from "./ontariospca.js";
 import type { SourceAdapter } from "./adapter.js";
 import { PetangoAdapter } from "./petango.js";
 import { SafePawsAdapter } from "./safepaws.js";
+import { ShopifyAdapter } from "./shopify.js";
 import { WelcomeDogKoreaAdapter } from "./welcomedogkorea.js";
 
 export function createAdapters(browsers: BrowserPool): Record<AdapterKind, SourceAdapter> {
@@ -19,6 +20,7 @@ export function createAdapters(browsers: BrowserPool): Record<AdapterKind, Sourc
     goldenrescue: new GoldenRescueAdapter(browsers),
     ontariospca: new OntarioSpcaAdapter(),
     welcomedogkorea: new WelcomeDogKoreaAdapter(),
+    shopify: new ShopifyAdapter(),
     html: new HtmlAdapter()
   };
 }

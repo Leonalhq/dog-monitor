@@ -98,3 +98,15 @@ sources:
     allowEmpty: true
     notifyRelisted: false
     filters: {}
+
+  - id: hbspca
+    name: Hamilton/Burlington SPCA
+    enabled: true
+    adapter: shopify
+    url: "https://www.hbspca.shop/collections/adoptable-dogs"
+    schedule: "42 * * * *"
+    allowEmpty: true
+    notifyRelisted: false
+    filters:
+      includeStatuses:
+        - Available
